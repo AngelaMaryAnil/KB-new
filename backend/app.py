@@ -5,6 +5,7 @@ from pymongo import MongoClient
 import bcrypt
 from flask_cors import CORS
 import re
+from bson import ObjectId
 
 app = Flask(__name__)
 CORS(app)
@@ -18,6 +19,9 @@ MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client["mydatabase"]  # Replace with your actual database name
 users_collection = db["users"]
+products_collection = db["products"]  # New collection for storing products
+
+# ======================= USER AUTHENTICATION ========================== #
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -61,6 +65,7 @@ def register():
 
     return jsonify({'message': 'User registered successfully', 'id': str(user['_id'])}), 201
 
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -91,6 +96,81 @@ def login():
     }
     logger.info("User logged in successfully: %s", user_data)
     return jsonify(user_data), 200
+
+# ========================== PRODUCT MANAGEMENT ========================== #
+
+@app.route('/products', methods=['POST'])
+def add_product():
+    data = request.get_json()
+    logger.info("Received product data: %s", data)
+
+    # Validate input
+    if not data.get('name') or not data.get('price') or not data.get('category'):
+        return jsonify({'error': 'Product name, price, and category are required'}), 400
+
+    product = {
+        "name": data['name'],
+        "description": data.get('description', ''),
+        "price": float(data['price']),
+        "stock": int(data.get('stock', 0)),
+        "category": data['category'],
+        "imageUrl": data.get('imageUrl', '')
+    }
+    result = products_collection.insert_one(product)
+    logger.info("Product added: %s", product)
+
+    return jsonify({'message': 'Product added successfully', 'id': str(result.inserted_id)}), 201
+
+
+@app.route('/products', methods=['GET'])
+def get_products():
+    products = list(products_collection.find())
+    products_list = [
+        {
+            'id': str(product['_id']),
+            'name': product['name'],
+            'description': product.get('description', ''),
+            'price': product['price'],
+            'stock': product.get('stock', 0),
+            'category': product['category'],
+            'imageUrl': product.get('imageUrl', '')
+        }
+        for product in products
+    ]
+    return jsonify(products_list), 200
+
+
+@app.route('/products/<product_id>', methods=['PUT'])
+def update_product(product_id):
+    data = request.get_json()
+    logger.info(f"Updating product {product_id} with data: {data}")
+
+    if not ObjectId.is_valid(product_id):
+        return jsonify({'error': 'Invalid product ID'}), 400
+
+    update_data = {key: value for key, value in data.items() if value is not None}
+
+    result = products_collection.update_one({'_id': ObjectId(product_id)}, {'$set': update_data})
+    if result.matched_count == 0:
+        return jsonify({'error': 'Product not found'}), 404
+
+    return jsonify({'message': 'Product updated successfully'}), 200
+
+
+@app.route('/products/<product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    logger.info(f"Deleting product with ID: {product_id}")
+
+    if not ObjectId.is_valid(product_id):
+        return jsonify({'error': 'Invalid product ID'}), 400
+
+    result = products_collection.delete_one({'_id': ObjectId(product_id)})
+    if result.deleted_count == 0:
+        return jsonify({'error': 'Product not found'}), 404
+
+    return jsonify({'message': 'Product deleted successfully'}), 200
+
+# ===================================================================== #
 
 if __name__ == '__main__':
     app.run(debug=True)

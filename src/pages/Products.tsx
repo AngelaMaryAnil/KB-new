@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ProductCard } from '../components/ProductCard';
 import { Filter } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import { useLocation } from 'react-router-dom';
 
-const categories = ['All', 'Seeds', 'Saplings', 'Pesticides', 'Fertilizers'];
+const categories = ['All', 'Seeds', 'Saplings', 'Pesticides', 'Fertilizers', 'shop by krishibhavan'];
 
 const products = [
   {

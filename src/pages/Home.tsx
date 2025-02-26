@@ -1,4 +1,3 @@
-import React from 'react';
 import { Leaf, Sprout, FlaskRound as Flask, Droplets } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
